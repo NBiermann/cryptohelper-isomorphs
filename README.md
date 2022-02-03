@@ -1,14 +1,14 @@
 ### Cryptohelpers
 
-As a big fan of classical ciphers and computer algorithms for solving them, I have developed several tools over the last years to help solving crypto problems. Most of them are written in C++. Some of them I am going to publish on GitHub.
+As a big fan of classical ciphers and computer algorithms for solving them, I have developed several tools over the last years to help solving crypto problems. Most of them are written in C++, some of which I am now publishing on GitHub.
 
 ### Isomorphs
 
 are fragments in the ciphertext whose structure is exactly repeated (in the sense of the same or different letter), for example:
 
 ```
-...wqiqswazzrq...
-...pasatpybbqa...
+...wqiqswazzrq... (somewhere in the ciphertext)
+...pasatpybbqa... (somewhere else in the ciphertext)
    12 2 1 33 2
 ```
 
@@ -89,5 +89,5 @@ The method `to_string()` converts the pattern into a string. The above example `
 ABCBDAEFFGB
 ```
 
-At the current development state, to_string() returns "`<pattern too complex>`" when more than 26 letters would be needed to represent the pattern.
+At the current development state, to_string() returns "`<pattern too complex>`" when more than 26 different letters would be needed to represent the pattern.
 
