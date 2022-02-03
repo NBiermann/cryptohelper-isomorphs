@@ -23,21 +23,21 @@ This led me to write an algorithm that recognizes isomorphs in a given ciphertex
 namespace cryptohelper {
 
 struct isomorph_pattern {
-	std::vector<size_t> v;
-	int significance = 0;
+    std::vector<size_t> v;
+    int significance = 0;
 
-	isomorph_pattern() = default;
-	isomorph_pattern(size_t n) : v(n), significance(0) {}
-	size_t size() const {return v.size();}
-	std::string to_string() const;
-	bool is_part_of(const isomorph_pattern& pat) const;
+    isomorph_pattern() = default;
+    isomorph_pattern(size_t n) : v(n), significance(0) {}
+    size_t size() const {return v.size();}
+    std::string to_string() const;
+    bool is_part_of(const isomorph_pattern& pat) const;
 };
 
 // comparator - the returned map is to be ordered by 
 // descending size and descending significance of the patterns
 struct isomorph_pattern_gt {
-	bool operator()(const isomorph_pattern& p1, 
-					const isomorph_pattern& p2) const;
+    bool operator()(const isomorph_pattern& p1, 
+                    const isomorph_pattern& p2) const;
 };
 
 // Returns the found patterns mapped to a vector<size_t> of their starting
@@ -48,9 +48,9 @@ struct isomorph_pattern_gt {
 // makes use of T::size(), T::at() and T::value_type::operator==(). 
 template<class T>
 std::map<isomorph_pattern, std::vector<size_t>, isomorph_pattern_gt>
-	get_isomorph_patterns(const T& ciphertext,
+    get_isomorph_patterns(const T& ciphertext,
                           size_t min_length = 3,
-                          size_t max_length = -1, 
+                          size_t max_length = -1,
                           size_t min_significance = 2);
 
 } // namespace cryptohelper
