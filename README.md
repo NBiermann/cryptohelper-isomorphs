@@ -19,7 +19,7 @@ This led me to write an algorithm that recognizes isomorphs in a given ciphertex
 
 ### Overview
 
-```
+```c++
 namespace cryptohelper {
 namespace isomorphs {
 
@@ -75,15 +75,15 @@ The "significance" of a pattern is defined as
 
 In the above given example the sequences have 7 positions with repeated letters and 3 different such letters, thus a significance of 7 - 3 = 4.
 
-##### Internal representation of an isomorphic pattern
+##### Internal representation of an isomorph pattern
 
 The vector `Pattern::v` represents a pattern in the following way: For each letter, the value at the corresponding index indicates after how many positions the same letter reappears for the first time. This approach eases the implementation of an efficient "sliding window".
 
 If we take the first 15 letters of George Lasry's challenge as an example, v looks like this
 
 ```
-[ S H C O  E N S Q Q V T Z Z O I ] 
-[ 6 0 0 10 0 0 0 1 0 0 0 1 0 0 0 ]
+S  H  C  O  E  N  S  Q  Q  V  T  Z  Z  O  I ...
+6  0  0 10  0  0  0  1  0  0  0  1  0  0  0
 ```
 
 Note that the pattern's significance can be read out as the number of non-zero values.
@@ -91,14 +91,18 @@ Note that the pattern's significance can be read out as the number of non-zero v
 When moving the "sliding window" one position forward in the ciphertext, we only have to do three things in the vector: Delete the first position (index 0), whereby  all other positions are shifted to the front, insert 0 at the end, and  for the newly added letter search backwards for the first occurrence from the end and, if found, enter the distance there as a value:
 
 ```
-S [ H C O  E N S Q Q V T Z Z O I Z ] 
-6 [ 0 0 10 0 0 0 1 0 0 0 1 3 0 0 0 ] 
-^                          ^     ^
+S  H  C  O  E  N  S  Q  Q  V  T  Z  Z  O  I  Z ...
+   0  0 10  0  0  0  1  0  0  0  1  3  0  0  0 
+^                                   ^        ^
+
+S  H  C  O  E  N  S  Q  Q  V  T  Z  Z  O  I  Z  N ...
+      0 10  0 11  0  1  0  0  0  1  3  0  0  0  0 
+   ^           ^                                ^
 ```
 
-##### External representation of an isomorphic pattern
+##### External representation of an isomorph pattern
 
-The method `to_string()` converts the pattern into a string. The above example `wqiqswazzrq` respectively `pasatpybbqa` would be represented as
+The method `to_string()` converts the pattern into a `string`. For example, the pattern of the above examples `wqiqswazzrq` and `pasatpybbqa` will be output as
 
 ```
 ABCBDAEFFGB
