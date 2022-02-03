@@ -19,7 +19,8 @@ struct isomorph_pattern {
 		char ch = 'A';
 		for (size_t i = 0; i != v.size(); ++i) {
 			if (s[i] != nullchar) continue;
-			if (ch > 'Z') return ("<pattern too complex>");
+			if (ch == 'z' + 1) return ("<pattern too complex>");
+			if (ch == 'Z' + 1) ch = 'a';
 			s[i] = ch;
 			size_t j = i;
 			while (v[j]) {
@@ -87,6 +88,8 @@ std::map<isomorph_pattern, std::vector<size_t>, isomorph_pattern_gt>
 		if (len > ciphertext.size() / 2) break;
 		// initialize pattern at the beginning of the ciphertext
 		isomorph_pattern pat(len);
+		// keep track of whether the last item is a repetition, i. e. is
+		// referenced (= pointed to) somewhere in v
 		bool last_item_is_referenced = false;
 		for (size_t i = 0; i != len - 1; ++i) {
 			for (size_t j = i + 1; j != len; ++j) {
@@ -100,15 +103,15 @@ std::map<isomorph_pattern, std::vector<size_t>, isomorph_pattern_gt>
 		}
 		size_t pos = 0;
 		while (1) {
-			// if first value of v is non-zero and the last item 
-			// is referenced, then the actual pattern size equals len:
+			// if the first value of v is non-zero and the last item is
+			// referenced, then the actual pattern size equals len:
 			// add pattern to result map
 			if (pat.significance >= min_significance &&
 				pat.v[0] && last_item_is_referenced) {
 				result[pat].push_back(pos);
 			}
 			if (pos + len == ciphertext.size()) break;
-			// move forward
+			// move sliding window forward
 			++pos;
 			// remove first item
 			if (pat.v[0]) --pat.significance;
