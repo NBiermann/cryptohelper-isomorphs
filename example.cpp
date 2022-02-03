@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -21,14 +22,15 @@ int main() {
         "msigyomccnfbbglbouibyzeck"
         "yfkrqdetaaimjrgjkkkf";
 
-    auto res = cryptohelper::get_isomorph_patterns<string>(ciphertext);
+    auto res = cryptohelper::get_isomorphs<string>(ciphertext);
     for (auto p : res) {
         cout << "pattern " << p.first.to_string();
         cout << " (size = " << p.first.size();
         cout << ", significance = " << p.first.significance;
         cout << ") at " << p.second.size() << " positions:" << endl;
         for (auto i : p.second) {
-            cout << i << ": " << ciphertext.substr(i, p.first.size()) << endl;
+            cout << setw(6) << i << ": " << 
+                    ciphertext.substr(i, p.first.size()) << endl;
         }
         cout << endl;
     }
