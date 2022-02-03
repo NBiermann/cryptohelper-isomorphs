@@ -22,22 +22,22 @@ This led me to write an algorithm that recognizes isomorphs in a given ciphertex
 ```
 namespace cryptohelper {
 
-struct isomorph_pattern {
+struct pattern {
     std::vector<size_t> v;
     int significance = 0;
 
-    isomorph_pattern() = default;
-    isomorph_pattern(size_t n) : v(n), significance(0) {}
+    pattern() = default;
+    pattern(size_t n) : v(n), significance(0) {}
     size_t size() const {return v.size();}
     std::string to_string() const;
-    bool is_part_of(const isomorph_pattern& pat) const;
+    bool is_part_of(const pattern& pat) const;
 };
 
 // comparator - the returned map is to be ordered by 
 // descending size and descending significance of the patterns
-struct isomorph_pattern_gt {
-    bool operator()(const isomorph_pattern& p1, 
-                    const isomorph_pattern& p2) const;
+struct pattern_gt {
+    bool operator()(const pattern& p1, 
+                    const pattern& p2) const;
 };
 
 // Returns the found patterns mapped to a vector<size_t> of their starting
@@ -47,8 +47,8 @@ struct isomorph_pattern_gt {
 // The ciphertext type T may be a string or vector of any type. The template
 // makes use of T::size(), T::at() and T::value_type::operator==(). 
 template<class T>
-std::map<isomorph_pattern, std::vector<size_t>, isomorph_pattern_gt>
-    get_isomorph_patterns(const T& ciphertext,
+std::map<pattern, std::vector<size_t>, pattern_gt>
+    get_isomorphs(const T& ciphertext,
                           size_t min_length = 3,
                           size_t max_length = -1,
                           size_t min_significance = 2);
@@ -63,7 +63,7 @@ The "significance" of a pattern is defined as
 
 In the above given example the sequences have 7 positions with repeated letters and 3 different such letters, thus a significance of 7 - 3 = 4.
 
-##### Internal representation of an isomorph pattern
+##### Internal representation of an isomorphic pattern
 
 The vector `isomorph_pattern::v` represents a pattern in the following way: For each letter, the value at the corresponding index indicates after how many positions the same letter reappears for the first time. This approach eases the implementation of a "sliding window".
 
@@ -82,7 +82,7 @@ S [ H C O  E N S Q Q V T Z Z O I Z ]
 ^                          ^     ^
 ```
 
-##### External representation of an isomorph pattern
+##### External representation of an isomorphic pattern
 
 The method `to_string()` converts the pattern into a string. The above example `wqiqswazzrq` respectively
 `pasatpybbqa` would be represented as
