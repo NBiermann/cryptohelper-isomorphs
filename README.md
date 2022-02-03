@@ -15,7 +15,9 @@ are fragments in the ciphertext whose structure is exactly repeated (in the sens
 See also the paper ["Analysis of a late 19th century french cipher created by Major Josse"](https://www.tandfonline.com/doi/full/10.1080/01611194.2021.1996484) by George Lasry.
 In January 2022, George created a [challenge](https://scienceblogs.de/klausis-krypto-kolumne/the-friedman-ring-challenge-by-george-lasry/) which can only be solved by identifying the isomorphs and using them to reduce the possible ciphertext alphabets of a Wheatstone Disk to a small number. 
 
-This led me to write an algorithm that recognizes isomorphs in a given ciphertext.
+This led me to write an algorithm that recognizes isomorphs in a given ciphertext. It is a template and accepts as ciphertext a `std::string` as well as a `std::vector` of any comparable type.
+
+### API
 
 ```
 namespace cryptohelper {
@@ -61,7 +63,7 @@ The "significance" of a pattern is defined as
 
 In the above given example the sequences have 7 positions with repeated letters and 3 different such letters, thus a significance of 7 - 3 = 4.
 
-##### Internal representation of a isomorph pattern
+##### Internal representation of an isomorph pattern
 
 The vector `isomorph_pattern::v` represents a pattern in the following way: For each letter, the value at the corresponding index indicates after how many positions the same letter reappears for the first time. This approach eases the implementation of a "sliding window".
 
@@ -80,7 +82,7 @@ S [ H C O  E N S Q Q V T Z Z O I Z ]
 ^                          ^     ^
 ```
 
-##### External representation of a isomorph pattern
+##### External representation of an isomorph pattern
 
 The method `to_string()` converts the pattern into a string. The above example `wqiqswazzrq` respectively
 `pasatpybbqa` would be represented as
@@ -89,5 +91,5 @@ The method `to_string()` converts the pattern into a string. The above example `
 ABCBDAEFFGB
 ```
 
-At the current development state, to_string() returns "`<pattern too complex>`" when more than 26 different letters would be needed to represent the pattern.
+At the current development state, `to_string()` returns "`<pattern too complex>`" when more than 52 different letters (A-Z, a-z) would be needed to represent the pattern.
 
