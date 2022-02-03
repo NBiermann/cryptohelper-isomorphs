@@ -6,12 +6,12 @@
 
 namespace cryptohelper {
 
-struct isomorph_pattern {
+struct pattern {
 	std::vector<size_t> v;
 	int significance = 0;
 
-	isomorph_pattern() = default;
-	isomorph_pattern(size_t n) : v(n), significance(0) {}
+	pattern() = default;
+	pattern(size_t n) : v(n), significance(0) {}
 	size_t size() const {return v.size();}
 	std::string to_string() const {
 		const char nullchar = '?';
@@ -31,7 +31,7 @@ struct isomorph_pattern {
 		}
 		return s;
 	}
-	bool is_part_of(const isomorph_pattern& pat) const {
+	bool is_part_of(const pattern& pat) const {
 		if (v.size() > pat.v.size()) return false;
 		if (v.size() == pat.v.size()) return v == pat.v;
 		for (size_t offset = 0; offset + v.size() <= pat.v.size(); ++offset) {
@@ -54,9 +54,9 @@ struct isomorph_pattern {
 
 // comparator - the returned map is to be ordered by 
 // descending size and descending significance of the patterns
-struct isomorph_pattern_gt {
-	bool operator()(const isomorph_pattern& p1, 
-					const isomorph_pattern& p2) const {
+struct pattern_gt {
+	bool operator()(const pattern& p1, 
+					const pattern& p2) const {
 		if (p1.size() != p2.size())
 			return p1.size() > p2.size();
 		if (p1.significance != p2.significance)
@@ -72,22 +72,22 @@ struct isomorph_pattern_gt {
 // The ciphertext type T may be a string or vector of any type. The template
 // makes use of T::size(), T::at() and T::value_type::operator==(). 
 template<class T>
-std::map<isomorph_pattern, std::vector<size_t>, isomorph_pattern_gt>
-	get_isomorph_patterns(
+std::map<pattern, std::vector<size_t>, pattern_gt>
+	get_isomorphs(
 		const T& ciphertext,
 		size_t min_length = 3,
 		size_t max_length = -1,
 		size_t min_significance = 2)
 {
 	if (!max_length) max_length = ciphertext.size() / 2;
-	std::map<isomorph_pattern, std::vector<size_t>, 
-							   isomorph_pattern_gt> result;
+	std::map<pattern, std::vector<size_t>, 
+							   pattern_gt> result;
 	if (min_length < 2) return result;
 	for (size_t len = min_length; len <= max_length; ++len) {
 		// a pattern longer than half the ciphertext size can't repeat
 		if (len > ciphertext.size() / 2) break;
 		// initialize pattern at the beginning of the ciphertext
-		isomorph_pattern pat(len);
+		pattern pat(len);
 		// keep track of whether the last item is a repetition, i. e. is
 		// referenced (= pointed to) somewhere in v
 		bool last_item_is_referenced = false;
