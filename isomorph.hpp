@@ -29,6 +29,8 @@ struct pattern {
 			size_t j = i;
 			while (v[j]) {
 				j += v[j];
+				if (j >= v.size()) throw runtime_error(
+					"pattern::to_string(): ill-formed pattern");
 				s[j] = ch;
 			}
 			++ch;
