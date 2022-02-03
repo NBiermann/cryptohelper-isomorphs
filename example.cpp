@@ -22,7 +22,7 @@ int main() {
         "msigyomccnfbbglbouibyzeck"
         "yfkrqdetaaimjrgjkkkf";
 
-    auto res = cryptohelper::get_isomorphs<string>(ciphertext);
+    auto res = cryptohelper::isomorphs::get_isomorphs<string>(ciphertext);
     for (auto p : res) {
         cout << "pattern " << p.first.to_string();
         cout << " (size = " << p.first.size();
