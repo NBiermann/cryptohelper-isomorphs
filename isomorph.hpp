@@ -6,13 +6,17 @@
 
 namespace cryptohelper {
 
+namespace isomorphs {
+
 struct pattern {
 	std::vector<size_t> v;
 	int significance = 0;
 
 	pattern() = default;
 	pattern(size_t n) : v(n), significance(0) {}
+
 	size_t size() const {return v.size();}
+
 	std::string to_string() const {
 		const char nullchar = '?';
 		std::string s(v.size(), nullchar);
@@ -31,6 +35,7 @@ struct pattern {
 		}
 		return s;
 	}
+
 	bool is_part_of(const pattern& pat) const {
 		if (v.size() > pat.v.size()) return false;
 		if (v.size() == pat.v.size()) return v == pat.v;
@@ -52,8 +57,86 @@ struct pattern {
 	}
 };
 
-// comparator - the returned map is to be ordered by 
-// descending size and descending significance of the patterns
+template<class T>
+pattern to_pattern(T text, size_t begin = 0, size_t end = -1) {
+	if (end > text.size()) end = text.size();
+	if (begin >= end) return pattern(0);
+	pattern pat(end - begin);
+	for (size_t i = begin; i != end - 1; ++i) {
+		for (size_t j = i + 1; j != end; ++j) {
+			if (text.at(i) == text.at(j)) {
+				pat.v[i] = j - i;
+				++pat.significance;
+				break;
+			}
+		}
+	}
+	return pat;
+}
+
+template<class T>
+class sliding_window {
+	const T& text;
+	size_t offset;
+	size_t len;
+	pattern pat;
+	bool is_first_item_repeated = false;
+	bool is_last_item_repeated = false;
+public:
+	sliding_window(const T& b, size_t l) 
+		: text(b)
+		, offset(0)
+		, len(l)
+	{
+		if (len < 2) throw runtime_error(
+			"sliding_window(): cannot initialize with length < 2");
+		pat = to_pattern<T>(text, 0, len);
+		is_first_item_repeated = pat.v[0];
+		auto val = text.at(len - 1);
+		for (size_t i = len - 2; i != 0; --i) {
+			if (text.at(i) == val) {
+				is_last_item_repeated = true;
+				break;
+			}
+		}
+	}
+
+	// returns true if successful, false if at end of text
+	bool advance() {
+		if (offset + len == text.size()) return false;
+		++offset;
+		// remove first item in pattern
+		if (pat.v[0]) --pat.significance;
+		pat.v.erase(pat.v.begin());
+		// insert zero at the end
+		pat.v.push_back(0);
+		is_first_item_repeated = pat.v[0];
+		// search for the newly included value
+		is_last_item_repeated = false;
+		auto val = text.at(offset + len - 1);
+		for (size_t diff = 1; diff != len; ++diff) {
+			if (text.at(offset + len - 1 - diff) == val) {
+				pat.v[len - 1 - diff] = diff;
+				++pat.significance;
+				is_last_item_repeated = true;
+				break;
+			}
+		}
+		return true;
+	}
+
+	const pattern& get_pattern() const { return pat; }
+
+	size_t get_offset() const { return offset; }
+
+	bool has_pattern_full_length() const {
+		return is_first_item_repeated && is_last_item_repeated;
+	}
+};
+
+// comparator - the patterns of the map returned by get_isomorphs() are to 
+// be ordered by 1) descending size, 2) descending significance, 3) ascending
+// built-in vector order of v
 struct pattern_gt {
 	bool operator()(const pattern& p1, 
 					const pattern& p2) const {
@@ -84,52 +167,17 @@ std::map<pattern, std::vector<size_t>, pattern_gt>
 							   pattern_gt> result;
 	if (min_length < 2) return result;
 	for (size_t len = min_length; len <= max_length; ++len) {
-		// a pattern longer than half the ciphertext size can't repeat
+		// a pattern longer than half the ciphertext can't repeat
 		if (len > ciphertext.size() / 2) break;
-		// initialize pattern at the beginning of the ciphertext
-		pattern pat(len);
-		// keep track of whether the last item is a repetition, i. e. is
-		// referenced (= pointed to) somewhere in v
-		bool last_item_is_referenced = false;
-		for (size_t i = 0; i != len - 1; ++i) {
-			for (size_t j = i + 1; j != len; ++j) {
-				if (ciphertext.at(i) == ciphertext.at(j)) {
-					pat.v[i] = j - i;
-					++pat.significance;
-					if (j == len - 1) last_item_is_referenced = true;
-					break;
-				}
-			}
-		}
-		size_t pos = 0;
-		while (1) {
-			// if the first value of v is non-zero and the last item is
-			// referenced, then the actual pattern size equals len:
-			// add pattern to result map
+		// initialize sliding window at the beginning of the ciphertext
+		sliding_window<T> win(ciphertext, len);
+		do {
+			// if preconditions are met, add pattern to result map 
+			pattern pat = win.get_pattern();
 			if (pat.significance >= min_significance &&
-				pat.v[0] && last_item_is_referenced) {
-				result[pat].push_back(pos);
-			}
-			if (pos + len == ciphertext.size()) break;
-			// move sliding window forward
-			++pos;
-			// remove first item
-			if (pat.v[0]) --pat.significance;
-			pat.v.erase(pat.v.begin());
-			// insert zero at the end
-			pat.v.push_back(0);
-			// search for the newly arrived value
-			last_item_is_referenced = false;
-			auto val = ciphertext.at(pos + len - 1);
-			for (size_t diff = 1; diff != len; ++diff) {
-				if (ciphertext.at(pos + len - 1 - diff) == val) {
-					pat.v[len - 1 - diff] = diff;
-					++pat.significance;
-					last_item_is_referenced = true;
-					break;
-				}
-			}
-		}
+				win.has_pattern_full_length())
+				result[pat].push_back(win.get_offset());
+		} while (win.advance());
 	}
 	// delete patterns with only 1 occurence:
 	auto it = result.begin();
@@ -156,4 +204,7 @@ std::map<pattern, std::vector<size_t>, pattern_gt>
 	}
 	return result;
 }
+
+} // namespace cryptohelper::isomorphs
+
 } // namespace cryptohelper
