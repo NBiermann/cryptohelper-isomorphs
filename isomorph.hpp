@@ -182,8 +182,8 @@ std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
     if (!max_length)
         max_length = ciphertext.size() / 2;
     std::map<Pattern, std::vector<size_t>, pattern_comp> result;
-    if (min_length < 2)
-        return result;
+    if (!min_length)
+        min_length = min_significance + 1;
     for (size_t len = min_length; len <= max_length; ++len) {
         // a pattern longer than half the ciphertext can't repeat
         if (len > ciphertext.size() / 2)
