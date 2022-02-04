@@ -46,9 +46,9 @@ public:
     bool advance();
     const Pattern& get_pattern() const;
     size_t get_offset() const;
-    // returns if both the first and last character are repeated
-    // somewhere within the window. Otherwise the effective pattern is
-    // of smaller size than the window.
+    // returns true if both the first and last character are repeated 
+    // somewhere within the window. Otherwise the effective pattern is of
+    // smaller size than the window.
     bool is_filled() const;
 };
 

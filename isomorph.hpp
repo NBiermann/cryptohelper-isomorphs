@@ -146,9 +146,9 @@ class SlidingWindow {
 
     size_t get_offset() const { return offset; }
 
-    // returns if both the first and last character are repeated somewhere
-    // within the window. Otherwise the effective pattern is of smaller size
-    // than the window.
+    // returns true if both the first and last character are repeated 
+    // somewhere within the window. Otherwise the effective pattern is of
+    // smaller size than the window.
     bool is_filled() const {
         return is_first_item_repeated && is_last_item_repeated;
     }
