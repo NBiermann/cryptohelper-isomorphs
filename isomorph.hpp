@@ -103,6 +103,9 @@ class SlidingWindow {
             throw std::runtime_error(
                 "SlidingWindow(): cannot initialize with length < 2");
         pat = to_pattern<T>(text, 0, len);
+        if (pat.size() < len)
+            throw std::runtime_error(
+                "SlidingWindow(): text too short, cannot initialize");
         is_first_item_repeated = pat.v[0];
         auto val = text.at(len - 1);
         for (size_t i = len - 2; i != 0; --i) {
