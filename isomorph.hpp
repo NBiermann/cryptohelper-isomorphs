@@ -181,13 +181,13 @@ std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
     size_t min_significance = 2) {
     if (!min_length)
         min_length = min_significance + 1;
-    if (!max_length)
+    // a pattern longer than half the ciphertext can't repeat
+    if (max_length > ciphertext.size() / 2)
         max_length = ciphertext.size() / 2;
     std::map<Pattern, std::vector<size_t>, pattern_comp> result;
-    for (size_t len = min_length; len <= max_length; ++len) {
-        // a pattern longer than half the ciphertext can't repeat
-        if (len > ciphertext.size() / 2)
-            break;
+    if (min_length >= ciphertext.size())
+        return result;
+    for (size_t len = max_length; len >= min_length; --len) {
         // initialize sliding window at the beginning of the ciphertext
         SlidingWindow<T> win(ciphertext, len);
         do {
@@ -196,34 +196,38 @@ std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
             if (pat.significance >= min_significance && win.is_filled())
                 result[pat].push_back(win.get_offset());
         } while (win.advance());
-    }
-    // delete patterns with only 1 occurence:
-    auto it = result.begin();
-    while (it != result.end()) {
-        if (it->second.size() < 2)
-            it = result.erase(it);
-        else
-            ++it;
-    }
-    // delete any pattern that is contained in another (longer) pattern unless
-    // it has more occurences than the latter
-    auto it1 = result.begin();
-    while (it1 != result.end()) {
-        bool is_contained = false;
-        for (auto it2 = result.begin(); it2 != result.end(); ++it2) {
-            // patterns are sorted by descending size in the map
-            if (it1->first.size() >= it2->first.size())
-                break;
-            if (it1->first.is_part_of(it2->first) &&
-                it1->second.size() == it2->second.size()) {
-                is_contained = true;
-                break;
-            }
+        // delete patterns with only 1 occurence:
+        auto it = result.begin();
+        while (it != result.end()) {
+            if (it->second.size() < 2)
+                it = result.erase(it);
+            else
+                ++it;
         }
-        if (is_contained)
-            it1 = result.erase(it1);
-        else
-            ++it1;
+        // delete any pattern that is contained in another (longer) pattern
+        // unless it has more occurences than the latter
+        auto it1 = result.begin();
+        while (it1 != result.end()) {
+            if (it1->first.size() != len) {
+                ++it1;
+                continue;
+            }
+            bool is_contained = false;
+            for (auto it2 = result.begin(); it2 != result.end(); ++it2) {
+                // patterns are sorted by descending size in the map
+                if (it2->first.size() == len)
+                    break;
+                if (it1->first.is_part_of(it2->first) &&
+                    it1->second.size() <= it2->second.size()) {
+                    is_contained = true;
+                    break;
+                }
+            }
+            if (is_contained)
+                it1 = result.erase(it1);
+            else
+                ++it1;
+        }
     }
     return result;
 }
