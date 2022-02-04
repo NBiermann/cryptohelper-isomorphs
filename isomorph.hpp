@@ -196,37 +196,33 @@ std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
             if (pat.significance >= min_significance && win.is_filled())
                 result[pat].push_back(win.get_offset());
         } while (win.advance());
-        // delete patterns with only 1 occurence:
+        // clean-up
         auto it = result.begin();
+        while (it != result.end() && it->first.size() != len)
+            ++it;     
         while (it != result.end()) {
-            if (it->second.size() < 2)
-                it = result.erase(it);
-            else
-                ++it;
-        }
-        // delete any pattern that is contained in another (longer) pattern
-        // unless it has more occurences than the latter
-        auto it1 = result.begin();
-        while (it1 != result.end()) {
-            if (it1->first.size() != len) {
-                ++it1;
+            // delete patterns with only 1 occurence:
+            if (it->second.size() < 2) {
+                it = result.erase(it); 
                 continue;
             }
+            // delete any pattern that is contained in another (longer) pattern
+            // unless it has more occurences than the latter
             bool is_contained = false;
             for (auto it2 = result.begin(); it2 != result.end(); ++it2) {
                 // patterns are sorted by descending size in the map
                 if (it2->first.size() == len)
                     break;
-                if (it1->first.is_part_of(it2->first) &&
-                    it1->second.size() <= it2->second.size()) {
+                if (it->first.is_part_of(it2->first) &&
+                    it->second.size() <= it2->second.size()) {
                     is_contained = true;
                     break;
                 }
             }
             if (is_contained)
-                it1 = result.erase(it1);
+                it = result.erase(it);
             else
-                ++it1;
+                ++it;
         }
     }
     return result;
