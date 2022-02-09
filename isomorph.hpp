@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <numeric>
 
 namespace cryptohelper {
 
@@ -11,36 +12,63 @@ namespace isomorphs {
 
 struct Pattern {
     std::vector<size_t> v;
-    int significance = 0;
+    size_t significance = 0;
 
     Pattern() = default;
     Pattern(size_t n) : v(n), significance(0) {}
-
+    bool operator==(const Pattern& p) const { return v == p.v; }
+    bool operator<(const Pattern& p) const { return v < p.v; }
     size_t size() const { return v.size(); }
 
+    // For convenience, Pattern is entirely public. If you change something
+    // in v, be aware that significance is not being updated automatically
+    // (and vice versa). If in doubt, use this method which recalculates, 
+    // stores and returns the significance.
+    int recalc_significance() { 
+        significance = 0;
+        for (const size_t& d : v)
+            if (d)
+                ++significance;
+        return significance;
+    }
+
+    // returns unified representation, e.g. "ABCA"
     std::string to_string() const {
-        const char nullchar = '?';
-        std::string s(v.size(), nullchar);
-        char ch = 'A';
+        std::vector<int> numbers = to_numbers();
+        const std::string symbols =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789"
+            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+        std::string s;
+        for (auto n : numbers) {
+            if (n >= symbols.size())
+                return ("<pattern too complex>");
+            s.push_back(symbols[n]);
+        }
+        return s;
+    }
+
+    // likewise, but returns vector of integer values, e.g. {0,1,2,0}
+    std::vector<int> to_numbers() const {
+        const int undefined = -1;
+        std::vector<int> res (v.size(), undefined);
+        int n = 0;
         for (size_t i = 0; i != v.size(); ++i) {
-            if (s[i] != nullchar)
+            if (res[i] != undefined)
                 continue;
-            if (ch == 'z' + 1)
-                return ("<Pattern too complex>");
-            if (ch == 'Z' + 1)
-                ch = 'a';
-            s[i] = ch;
+            res[i] = n;
             size_t j = i;
             while (v[j]) {
                 j += v[j];
                 if (j >= v.size())
                     throw std::runtime_error(
-                        "Pattern::to_string(): ill-formed pattern");
-                s[j] = ch;
+                        "Pattern::to_numbers(): ill-formed pattern");
+                res[j] = n;
             }
-            ++ch;
+            ++n;
         }
-        return s;
+        return res;
     }
 
     bool is_part_of(const Pattern& pat) const {
@@ -69,6 +97,10 @@ struct Pattern {
     }
 };
 
+// The (cipher-)text type T in the templates below may be a string or
+// vector of any type. The templates make use of T::size(), T::at() and
+// T::value_type::operator==().
+
 template <class T>
 Pattern to_pattern(T text, size_t begin = 0, size_t end = -1) {
     if (end > text.size())
@@ -76,9 +108,9 @@ Pattern to_pattern(T text, size_t begin = 0, size_t end = -1) {
     if (begin >= end)
         return Pattern(0);
     Pattern pat(end - begin);
-    for (size_t i = begin; i != end - 1; ++i) {
-        for (size_t j = i + 1; j != end; ++j) {
-            if (text.at(i) == text.at(j)) {
+    for (size_t i = 0; i != end - begin - 1; ++i) {
+        for (size_t j = i + 1; j != end - begin; ++j) {
+            if (text.at(begin + i) == text.at(begin + j)) {
                 pat.v[i] = j - i;
                 ++pat.significance;
                 break;
@@ -99,17 +131,20 @@ class SlidingWindow {
 
    public:
     SlidingWindow(const T& t, size_t l) : text(t), offset(0), len(l) {
-        if (len < 2)
+        if (!len)
             throw std::runtime_error(
-                "SlidingWindow(): cannot initialize with length < 2");
+                "SlidingWindow(): cannot initialize with length == 0");
         pat = to_pattern<T>(text, 0, len);
         if (pat.size() < len)
             throw std::runtime_error(
                 "SlidingWindow(): text too short, cannot initialize");
         is_first_item_repeated = pat.v[0];
+        is_last_item_repeated = false;
+        if (len == 1)
+            return;
         auto val = text.at(len - 1);
-        for (size_t i = len - 2; i != 0; --i) {
-            if (text.at(i) == val) {
+        for (size_t d = 2; d <= len; ++d) {
+            if (text.at(len - d) == val) {
                 is_last_item_repeated = true;
                 break;
             }
@@ -126,19 +161,20 @@ class SlidingWindow {
             --pat.significance;
         pat.v.erase(pat.v.begin());
         // insert zero at the end
-        pat.v.push_back(0);
-        is_first_item_repeated = pat.v[0];
+        pat.v.push_back(0);    
         // search for the newly included value
         is_last_item_repeated = false;
         auto val = text.at(offset + len - 1);
-        for (size_t diff = 1; diff != len; ++diff) {
-            if (text.at(offset + len - 1 - diff) == val) {
-                pat.v[len - 1 - diff] = diff;
+        for (size_t d = 1; d != len; ++d) {
+            if (text.at(offset + len - 1 - d) == val) {
+                pat.v[len - 1 - d] = d;
                 ++pat.significance;
                 is_last_item_repeated = true;
                 break;
             }
         }
+        // only now v[0] reliably reveals if first item is repeated
+        is_first_item_repeated = pat.v[0];
         return true;
     }
 
@@ -146,13 +182,34 @@ class SlidingWindow {
 
     size_t get_offset() const { return offset; }
 
-    // returns true if both the first and last character are repeated 
+    // returns true if both the first and last character are repeated
     // somewhere within the window. Otherwise the effective pattern is of
     // smaller size than the window.
     bool is_filled() const {
         return is_first_item_repeated && is_last_item_repeated;
     }
 };
+
+// Searches the first argument for a specific pattern and returns a vector
+// with the corresponding start indices.
+template <class T>
+std::vector<size_t> find_pattern(const T& ciphertext, const Pattern& p) {
+    std::vector<size_t> result;
+    if (!p.size() || ciphertext.size() < p.size())
+        return result;
+    //// size 1 pattern matches all indices
+    //if (p.size() == 1) {
+    //    result.resize(ciphertext.size());
+    //    std::iota(result.begin(), result.end(), 0);
+    //    return result;
+    //}
+    SlidingWindow<T> win(ciphertext, p.size());
+    do {
+        if (win.get_pattern() == p)
+            result.push_back(win.get_offset());
+    } while (win.advance());
+    return result;
+}
 
 // comparator - the patterns of the map returned by get_isomorphs() are to
 // be ordered by 1) descending size, 2) descending significance, 3) ascending
@@ -167,18 +224,21 @@ struct pattern_comp {
     }
 };
 
-// Returns the found patterns mapped to a vector<size_t> of their start
-// positions in the ciphertext. Patterns that only occur once are ignored.
+// Returns the found isomorphs mapped to a vector<size_t> of their start
+// positions in the ciphertext. The patterns are sorted by descending size
+// and descending significance. Patterns that only occur once are ignored.
 // Patterns that actually are sub-patterns of longer ones in the result map
 // are ignored, unless they occur at more places than their "parents".
-// The ciphertext type T may be a string or vector of any type. The template
-// makes use of T::size(), T::at() and T::value_type::operator==().
+// Patterns are ignored unless both the first and last letters are repeated
+// within the pattern. This last rule does not apply to patterns with
+// significance = 0.
 template <class T>
 std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
-    const T& ciphertext,
-    size_t min_length = 3,
-    size_t max_length = -1,
-    size_t min_significance = 2) {
+        const T& ciphertext,
+        size_t min_length = 3,
+        size_t max_length = -1,
+        size_t min_significance = 2) 
+{
     if (!min_length)
         min_length = min_significance + 1;
     // a pattern longer than half the ciphertext can't repeat
@@ -193,17 +253,18 @@ std::map<Pattern, std::vector<size_t>, pattern_comp> get_isomorphs(
         do {
             // if preconditions are met, add pattern to result map
             Pattern pat = win.get_pattern();
-            if (pat.significance >= min_significance && win.is_filled())
-                result[pat].push_back(win.get_offset());
+            if (pat.significance >= min_significance && 
+                (win.is_filled() || !pat.significance))
+                result[pat].push_back(win.get_offset());               
         } while (win.advance());
         // clean-up
         auto it = result.begin();
         while (it != result.end() && it->first.size() != len)
-            ++it;     
+            ++it;
         while (it != result.end()) {
             // delete patterns with only 1 occurence:
             if (it->second.size() < 2) {
-                it = result.erase(it); 
+                it = result.erase(it);
                 continue;
             }
             // delete any pattern that is contained in another (longer) pattern
