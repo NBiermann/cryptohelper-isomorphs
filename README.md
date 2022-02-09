@@ -25,15 +25,26 @@ namespace isomorphs {
 
 struct Pattern {
     std::vector<size_t> v;
-    int significance = 0;
+    size_t significance = 0;
 
     Pattern() = default;
     Pattern(size_t n) : v(n), significance(0) {}
+    bool operator==(const Pattern&) const { return v == p.v; }
+    bool operator<(const Pattern&) const { return v < p.v; }
     size_t size() const {return v.size();}
+    // recalculates, stores and returns the significance
+    int recalc_significance();
+    // returns unified representation, e.g. "ABCA"
     std::string to_string() const;
-    bool is_part_of(const Pattern& pat) const;
+    // likewise, but returns vector of integer values, e.g. {0,1,2,0}
+    std::vector<int> to_numbers() const;
+    bool is_part_of(const Pattern&) const;
 };
 
+// The (cipher-)text type T in the templates below may be a string or 
+// vector of any type. The templates make use of T::size(), T::at() and
+// T::value_type::operator==().
+    
 template<class T>
 Pattern to_pattern(T text, size_t begin = 0, size_t end = -1);
 
@@ -46,19 +57,25 @@ public:
     bool advance();
     const Pattern& get_pattern() const;
     size_t get_offset() const;
-    // returns true if both the first and last character are repeated 
+    // returns true if both the first and last item are repeated 
     // somewhere within the window. Otherwise the effective pattern is of
     // smaller size than the window.
     bool is_filled() const;
 };
+    
+// Searches the first argument for a specific pattern and returns a vector
+// with the corresponding start indices.
+template <class T>
+std::vector<size_t> find_pattern(const T& ciphertext, const Pattern& p);
 
-// Returns the found patterns mapped to a vector<size_t> of their start
+// Returns the found isomorphs mapped to a vector<size_t> of their start
 // positions in the ciphertext. The patterns are sorted by descending size
 // and descending significance. Patterns that only occur once are ignored.
 // Patterns that actually are sub-patterns of longer ones in the result map 
-// are ignored, unless they occur at more places than their "parents". 
-// The ciphertext type T may be a string or vector of any type. The template
-// makes use of T::size(), T::at() and T::value_type::operator==(). 
+// are ignored, unless they occur at more places than their "parents".
+// Patterns are ignored unless both the first and last letters are repeated 
+// within the pattern. This last rule does not apply to patterns with 
+// significance = 0.
 template<class T>
 std::map<Pattern, std::vector<size_t>>
     get_isomorphs(const T& ciphertext,
@@ -71,7 +88,7 @@ std::map<Pattern, std::vector<size_t>>
 ```
 
 The "significance" of a pattern is defined as
-*[number of occurences of repeated characters] - [number of disctinct repeated characters]*. 
+*[number of occurrences of repeated characters] - [number of distinct repeated characters]*. 
 
 In the above given example the sequences have 7 positions with repeated letters and 3 different such letters, thus a significance of 7 - 3 = 4.
 
@@ -108,5 +125,18 @@ The method `to_string()` converts the pattern into a `string`. For example, the 
 ABCBDAEFFGB
 ```
 
-At the current development state, `to_string()` returns "`<pattern too complex>`" when more than 52 different letters (A-Z, a-z) would be needed to represent the pattern.
+At the current development state, `to_string()` returns "`<pattern too complex>`" when more than 94 different characters would be needed to represent the pattern. The following characters are used (in this order):
+
+```
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+abcdefghijklmnopqrstuvwxyz
+0123456789
+!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+```
+
+The method `to_numbers()` is less limited as it converts the pattern into a vector of integer values, counting from zero. For the above examples it returns 
+
+```
+[0, 1, 2, 1, 3, 0, 4, 5, 5, 6, 1]
+```
 
